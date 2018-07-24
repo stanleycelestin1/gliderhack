@@ -9,6 +9,18 @@
   Note that you need Teensy 3.x/LC or 328P based (e.g. Pro Mini, Nano, Uno) board and FrSkySportTelemetry library for this example to work
 */
 
+/*
+ * DEFINES
+ */
+ 
+#define TELEMETRY_TIMER         0
+#define LED_TIMER               1
+#define UPLINK_TIMER            2
+
+#define TELEMETRY_TIME_INTERVAL 250
+#define UPLINK_TIME_INTERVAL    250
+#define LED_TIME_INTERVAL       1000
+
 // Uncomment the #define below to enable internal polling of data.
 // Use only when there is no device in the S.Port chain (e.g. S.Port capable FrSky receiver) that normally polls the data.
 //#define POLLING_ENABLED
@@ -23,6 +35,9 @@
 #include "FrSkySportSensorVario.h"
 #include "FrSkySportSingleWireSerial.h"
 #include "FrSkySportTelemetry.h"
+#include "Timers.h"
+//#include "Timers.cpp"
+
 #if !defined(__MK20DX128__) && !defined(__MK20DX256__) && !defined(__MKL26Z64__) && !defined(__MK66FX1M0__) && !defined(__MK64FX512__)
 #include "SoftwareSerial.h"
 #endif
@@ -41,19 +56,46 @@ FrSkySportSensorVario vario;                           // Create Variometer sens
   FrSkySportTelemetry telemetry;                       // Create telemetry object without polling
 #endif
 
+//constants
+const int ledPin = 13;
+
+//Flags
+
+bool LED_STATE = 0;
+
+//function prototypes
+void downlinkTelemetry();
+void RespLEDTimerExpired(void);
+unsigned char TestLEDTimerExpired(void);
+void RespTelemetryTimerExpired(void);
+unsigned char TestTelemetryTimerExpired(void);
+
 void setup()
 {
-  // Configure the telemetry serial port and sensors (remember to use & to specify a pointer to sensor)
-#if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MKL26Z64__) || defined(__MK66FX1M0__) || defined(__MK64FX512__)
-  telemetry.begin(FrSkySportSingleWireSerial::SERIAL_3, &ass, &fcs, &flvss1, &flvss2, &gps, &rpm, &sp2uart, &vario);
-#else
-  telemetry.begin(FrSkySportSingleWireSerial::SOFT_SERIAL_PIN_12, &ass, &fcs, &flvss1, &flvss2, &gps, &rpm, &sp2uart, &vario);
-#endif
+    // Configure the telemetry serial port and sensors (remember to use & to specify a pointer to sensor)
+  #if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MKL26Z64__) || defined(__MK66FX1M0__) || defined(__MK64FX512__)
+    telemetry.begin(FrSkySportSingleWireSerial::SERIAL_3, &ass, &fcs, &flvss1, &flvss2, &gps, &rpm, &sp2uart, &vario);
+  #else
+    telemetry.begin(FrSkySportSingleWireSerial::SOFT_SERIAL_PIN_12, &ass, &fcs, &flvss1, &flvss2, &gps, &rpm, &sp2uart, &vario);
+  #endif
+
+  //initialize the timers
+  TMRArd_InitTimer(TELEMETRY_TIMER , TELEMETRY_TIME_INTERVAL);
+  TMRArd_InitTimer(UPLINK_TIMER, UPLINK_TIME_INTERVAL);
+  TMRArd_InitTimer(LED_TIMER, LED_TIME_INTERVAL);
 }
 
 void loop()
 {
-  // Set airspeed sensor (ASS) data
+  //run the loop
+  if (TestTelemetryTimerExpired()) RespTelemetryTimerExpired();
+
+  //blink the led
+  if (TestLEDTimerExpired()) RespLEDTimerExpired();
+}
+
+void downlinkTelemetry(){
+    // Set airspeed sensor (ASS) data
   ass.setData(76.5);  // Airspeed in km/h
 
   // Set current/voltage sensor (FCS) data
@@ -96,3 +138,25 @@ void loop()
   telemetry.send();
 }
 
+//LED timer functions
+void RespLEDTimerExpired(void) {
+  LED_STATE = !LED_STATE;
+  digitalWrite(ledPin, LED_STATE);
+  Serial.println("LED");
+  TMRArd_InitTimer(LED_TIMER, LED_TIME_INTERVAL);
+}
+
+unsigned char TestLEDTimerExpired(void) {
+  return (unsigned char)(TMRArd_IsTimerExpired(LED_TIMER));
+}
+
+//telemetry timer functions
+void RespTelemetryTimerExpired(void) {
+  downlinkTelemetry();
+  Serial.println("telemetry");
+  TMRArd_InitTimer(TELEMETRY_TIMER, TELEMETRY_TIME_INTERVAL);
+}
+
+unsigned char TestTelemetryTimerExpired(void) {
+  return (unsigned char)(TMRArd_IsTimerExpired(TELEMETRY_TIMER));
+}
