@@ -79,6 +79,8 @@ void setup()
     telemetry.begin(FrSkySportSingleWireSerial::SOFT_SERIAL_PIN_12, &ass, &fcs, &flvss1, &flvss2, &gps, &rpm, &sp2uart, &vario);
   #endif
 
+  pinMode(ledPin,OUTPUT);
+    
   //initialize the timers
   TMRArd_InitTimer(TELEMETRY_TIMER , TELEMETRY_TIME_INTERVAL);
   TMRArd_InitTimer(UPLINK_TIMER, UPLINK_TIME_INTERVAL);
@@ -86,7 +88,10 @@ void setup()
 }
 
 void loop()
-{
+{ 
+  //send telemetry
+  downlinkTelemetry();
+  
   //run the loop
   if (TestTelemetryTimerExpired()) RespTelemetryTimerExpired();
 
@@ -132,10 +137,10 @@ void downlinkTelemetry(){
   // (set Variometer source to VSpd in menu to use the vertical speed data from this sensor for variometer).
   vario.setData(1000.00,  // Altitude in meters (can be negative)
                 -1.5);  // Vertical speed in m/s (positive - up, negative - down)
-
   // Send the telemetry data, note that the data will only be sent for sensors
   // that are being polled at given moment
   telemetry.send();
+
 }
 
 //LED timer functions
@@ -152,7 +157,7 @@ unsigned char TestLEDTimerExpired(void) {
 
 //telemetry timer functions
 void RespTelemetryTimerExpired(void) {
-  downlinkTelemetry();
+  //downlinkTelemetry();
   Serial.println("telemetry");
   TMRArd_InitTimer(TELEMETRY_TIMER, TELEMETRY_TIME_INTERVAL);
 }
