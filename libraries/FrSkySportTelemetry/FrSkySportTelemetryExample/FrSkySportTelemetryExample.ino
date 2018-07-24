@@ -1,7 +1,4 @@
 /*
- * DLG Telemetry Downlink Example
- * <iskushan>
- * based on:
   FrSky S-Port Telemetry library example
   (c) Pawelsky 20160916
   Not for commercial use
@@ -59,20 +56,20 @@ void loop()
   // Set current/voltage sensor (FCS) data
   // (set Voltage source to FAS in menu to use this data for battery voltage,
   //  set Current source to FAS in menu to use this data for current readins)
-  fcs.setData(1.0,   // Current consumption in amps
-              4.2);  // Battery voltage in volts
+  fcs.setData(25.3,   // Current consumption in amps
+              12.6);  // Battery voltage in volts
 
   // Set LiPo voltage sensor (FLVSS) data (we use two sensors to simulate 8S battery 
   // (set Voltage source to Cells in menu to use this data for battery voltage)
-  //flvss1.setData(4.07, 4.08, 4.09, 4.10, 4.11, 4.12);  // Cell voltages in volts (cells 1-6)
-  //flvss2.setData(4.13, 4.14);                          // Cell voltages in volts (cells 7-8)
+  flvss1.setData(4.07, 4.08, 4.09, 4.10, 4.11, 4.12);  // Cell voltages in volts (cells 1-6)
+  flvss2.setData(4.13, 4.14);                          // Cell voltages in volts (cells 7-8)
 
   // Set GPS data
   gps.setData(48.858289, 2.294502,   // Latitude and longitude in degrees decimal (positive for N/E, negative for S/W)
-              1000.00,                 // Altitude in m (can be negative)
+              245.5,                 // Altitude in m (can be negative)
               100.0,                 // Speed in m/s
               90.23,                 // Course over ground in degrees (0-359, 0 = north)
-              18, 2, 9,             // Date (year - 2000, month, day)
+              14, 9, 14,             // Date (year - 2000, month, day)
               12, 00, 00);           // Time (hour, minute, second) - will be affected by timezone setings in your radio
 
   // Set RPM/temperature sensor data
@@ -88,7 +85,7 @@ void loop()
 
  // Set variometer data
   // (set Variometer source to VSpd in menu to use the vertical speed data from this sensor for variometer).
-  vario.setData(1000.00,  // Altitude in meters (can be negative)
+  vario.setData(250.5,  // Altitude in meters (can be negative)
                 -1.5);  // Vertical speed in m/s (positive - up, negative - down)
 
   // Send the telemetry data, note that the data will only be sent for sensors
