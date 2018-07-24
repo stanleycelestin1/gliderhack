@@ -18,7 +18,7 @@
 #define UPLINK_TIMER            2
 
 #define TELEMETRY_TIME_INTERVAL 250
-#define UPLINK_TIME_INTERVAL    250
+#define UPLINK_TIME_INTERVAL    50
 #define LED_TIME_INTERVAL       1000
 
 // Uncomment the #define below to enable internal polling of data.
@@ -36,6 +36,9 @@
 #include "FrSkySportSingleWireSerial.h"
 #include "FrSkySportTelemetry.h"
 #include "Timers.h"
+// uplink include
+#include "SBUS.h"
+#include "Servo.h"
 //#include "Timers.cpp"
 
 #if !defined(__MK20DX128__) && !defined(__MK20DX256__) && !defined(__MKL26Z64__) && !defined(__MK66FX1M0__) && !defined(__MK64FX512__)
@@ -63,6 +66,25 @@ const int ledPin = 13;
 
 bool LED_STATE = 0;
 
+//
+//
+// a SBUS object, which is on Teensy hardware
+// serial port 1
+SBUS x8r(Serial1);
+Servo RightAileron;  // create servo object to control a servo
+Servo LeftAileron;  // create servo object to control a servo
+Servo Elevator;  // create servo object to control a servo
+int aileron_servoval = 90;
+int elevator_servoval = 90;
+int rudder_servoval = 90;
+
+// channel, fail safe, and lost frames data
+uint16_t channels[16];
+uint8_t failSafe;
+uint16_t lostFrames = 0;
+//
+//
+
 //function prototypes
 void downlinkTelemetry();
 void RespLEDTimerExpired(void);
@@ -70,6 +92,7 @@ unsigned char TestLEDTimerExpired(void);
 void RespTelemetryTimerExpired(void);
 unsigned char TestTelemetryTimerExpired(void);
 
+int throttle, aileron, elevator,rudder;
 void setup()
 {
     // Configure the telemetry serial port and sensors (remember to use & to specify a pointer to sensor)
@@ -85,6 +108,26 @@ void setup()
   TMRArd_InitTimer(TELEMETRY_TIMER , TELEMETRY_TIME_INTERVAL);
   TMRArd_InitTimer(UPLINK_TIMER, UPLINK_TIME_INTERVAL);
   TMRArd_InitTimer(LED_TIMER, LED_TIME_INTERVAL);
+  //
+  //
+
+  //
+  //
+  // begin the SBUS communication
+  x8r.begin();
+  RightAileron.attach(5); //right aileron servo
+  LeftAileron.attach(6); //left aileron servo
+  Elevator.attach(23); //left aileron servo
+  RightAileron.write(aileron_servoval);
+  LeftAileron.write(aileron_servoval);
+  Elevator.write(90);   
+  Serial.begin(115200);
+  Serial.println("receiving control commands");
+  pinMode(5,OUTPUT);
+
+  //
+  //
+  //
 }
 
 void loop()
@@ -97,6 +140,26 @@ void loop()
 
   //blink the led
   if (TestLEDTimerExpired()) RespLEDTimerExpired();
+
+  if(x8r.read(&channels[0], &failSafe, &lostFrames)){
+    throttle = channels[0];
+    aileron  = channels[1];
+    elevator = channels[2];
+    rudder   = channels[3];
+    
+    Serial.print("t : ");
+    Serial.println(throttle); //throttle
+    Serial.print("a : ");
+    Serial.println(aileron); //aileron
+    Serial.print("e : ");
+    Serial.println(elevator); //elevator
+//    Serial.print("a : ");
+//    Serial.println(rudder); //rudder
+    
+  }
+  // uplink
+  if (TestUplinkTimerExpired()) RespUplinkTimerExpired();
+
 }
 
 void downlinkTelemetry(){
@@ -165,3 +228,37 @@ void RespTelemetryTimerExpired(void) {
 unsigned char TestTelemetryTimerExpired(void) {
   return (unsigned char)(TMRArd_IsTimerExpired(TELEMETRY_TIMER));
 }
+
+
+//uplink timer functions
+void RespUplinkTimerExpired(void) {
+ 
+  Serial.println("uplink");
+  uplink();
+  TMRArd_InitTimer(UPLINK_TIMER, UPLINK_TIME_INTERVAL);
+}
+
+unsigned char TestUplinkTimerExpired(void) {
+  return (unsigned char)(TMRArd_IsTimerExpired(UPLINK_TIMER));
+}
+
+
+
+
+
+
+void  uplink(){
+    
+
+  aileron_servoval = map(aileron, 172, 1800, 0, 180);     // scale it to use it with the servo (value between 0 and 180)
+  RightAileron.write(aileron_servoval);
+  LeftAileron.write(aileron_servoval);    
+  
+  elevator_servoval = map(elevator, 172, 1800, 0, 180);     // scale it to use it with the servo (value between 0 and 180)
+  Elevator.write(elevator_servoval);
+
+//  rudder_servoval = map(rudder, 172, 1800, 0, 180);     // scale it to use it with the servo (value between 0 and 180)
+//  Rudder.write(rudder_servoval);
+  
+}
+
